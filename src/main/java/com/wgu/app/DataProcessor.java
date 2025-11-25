@@ -1,40 +1,36 @@
 package com.wgu.app;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 
-/**
- * Utility class for processing binary data.
- */
 public class DataProcessor {
-    
-    private static final int BUFFER_SIZE = 10;
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    
-    /**
-     * Copies input data to internal buffer.
-     */
-    public void processData(byte[] input) {
-        System.arraycopy(input, 0, buffer, 0, input.length);
+    // Safely processes input data without exceeding buffer sizes.
+    public byte[] process(byte[] input) {
+        if (input == null) return new byte[0];
+        // Use ByteArrayOutputStream to avoid manual buffer management
+        ByteArrayOutputStream out = new ByteArrayOutputStream(input.length);
+        final int chunkSize = 4096;
+        int offset = 0;
+        while (offset < input.length) {
+            int len = Math.min(chunkSize, input.length - offset);
+            out.write(input, offset, len);
+            offset += len;
+        }
+        return out.toByteArray();
     }
-    
-    /**
-     * Writes data to a ByteBuffer.
-     */
-    public void writeToBuffer(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        buffer.put(data);
+
+    public String processToString(byte[] input) {
+        return new String(process(input), StandardCharsets.UTF_8);
     }
-    
-    /**
-     * Sets a value at the specified index.
-     */
-    public void setValue(int index, byte value) {
-        buffer[index] = value;
-    }
-    
-    public byte[] getBuffer() {
-        return Arrays.copyOf(buffer, buffer.length);
+
+    // Safe copy with bounds checks
+    public static int safeCopy(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
+        if (src == null || dest == null) return 0;
+        if (srcPos < 0 || destPos < 0 || length < 0) return 0;
+        int maxLen = Math.min(length, Math.min(src.length - srcPos, dest.length - destPos));
+        if (maxLen <= 0) return 0;
+        System.arraycopy(src, srcPos, dest, destPos, maxLen);
+        return maxLen;
     }
 }
 
