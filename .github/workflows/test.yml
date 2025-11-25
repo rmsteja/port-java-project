@@ -1,0 +1,62 @@
+name: Port – Auto branch + PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket_key:
+        description: "Jira ticket key"
+        required: true
+        type: string
+      base_branch:
+        description: "Base branch"
+        required: true
+        type: string
+        default: main
+      file_path:
+        description: "Path of file to create"
+        required: true
+        type: string
+        default: "auto.txt"
+      file_content:
+        description: "Content of the file"
+        required: true
+        type: string
+        default: "Auto-created file"
+
+permissions:
+  contents: write       # needed to push branch & commit
+  pull-requests: write  # needed to open PR
+
+jobs:
+  create-branch-and-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.base_branch }}
+
+      - name: Prepare new branch name
+        id: names
+        run: |
+          BRANCH="feature/jira-${{ github.event.inputs.ticket_key }}"
+          echo "branch_name=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Create file
+        run: |
+          FILE_PATH="${{ github.event.inputs.file_path }}"
+          mkdir -p "$(dirname "$FILE_PATH")"
+          cat << 'EOF' > "$FILE_PATH"
+          ${{ github.event.inputs.file_content }}
+          EOF
+
+      - name: Commit and push changes via peter-evans/create-pull-request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Add file for Jira ticket ${{ github.event.inputs.ticket_key }}"
+          title: "PR for Jira ticket ${{ github.event.inputs.ticket_key }}"
+          body: "Auto-generated PR for Jira ticket ${{ github.event.inputs.ticket_key }}."
+          branch: ${{ steps.names.outputs.branch_name }}
+          base: ${{ github.event.inputs.base_branch }}
+          delete-branch: false
