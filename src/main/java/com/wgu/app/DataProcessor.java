@@ -1,40 +1,36 @@
 package com.wgu.app;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-
-/**
- * Utility class for processing binary data.
- */
 public class DataProcessor {
-    
-    private static final int BUFFER_SIZE = 10;
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    
+    // Default buffer size used by this processor
+    private static final int DEFAULT_BUFFER_SIZE = 1024;
+
     /**
-     * Copies input data to internal buffer.
+     * Safely writes the input data into a fixed-size buffer with proper bounds checking
+     * to prevent buffer overflow. If the input is larger than the buffer, only the first
+     * buffer-length bytes are copied.
+     *
+     * @param data input byte array, may be larger than the internal buffer
+     * @return a new byte array containing the copied bytes without overflow
      */
-    public void processData(byte[] input) {
-        System.arraycopy(input, 0, buffer, 0, input.length);
+    public byte[] writeDataSafely(byte[] data) {
+        if (data == null) {
+            return new byte[0];
+        }
+        byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+        int len = Math.min(data.length, buffer.length);
+        // Copy only up to the buffer capacity to avoid IndexOutOfBounds
+        System.arraycopy(data, 0, buffer, 0, len);
+        // Return only the valid portion to avoid exposing unused buffer space
+        byte[] result = new byte[len];
+        System.arraycopy(buffer, 0, result, 0, len);
+        return result;
     }
-    
+
     /**
-     * Writes data to a ByteBuffer.
+     * Processes data by delegating to safe writer to ensure no buffer overflow occurs.
      */
-    public void writeToBuffer(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        buffer.put(data);
-    }
-    
-    /**
-     * Sets a value at the specified index.
-     */
-    public void setValue(int index, byte value) {
-        buffer[index] = value;
-    }
-    
-    public byte[] getBuffer() {
-        return Arrays.copyOf(buffer, buffer.length);
+    public byte[] process(byte[] data) {
+        return writeDataSafely(data);
     }
 }
 
