@@ -4,37 +4,59 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
- * Utility class for processing binary data.
+ * DataProcessor with explicit bounds checking to prevent buffer overflows.
+ * All copy/put operations clamp sizes to available buffer capacity.
  */
 public class DataProcessor {
-    
-    private static final int BUFFER_SIZE = 10;
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    
+
     /**
-     * Copies input data to internal buffer.
+     * Safely extracts a slice from the input without exceeding bounds.
+     * If requested length exceeds available data, it is clamped.
      */
-    public void processData(byte[] input) {
-        System.arraycopy(input, 0, buffer, 0, input.length);
+    public byte[] process(byte[] input, int offset, int length) {
+        if (input == null) {
+            return new byte[0];
+        }
+        // Normalize offset
+        if (offset < 0) {
+            offset = 0;
+        } else if (offset > input.length) {
+            offset = input.length;
+        }
+        // Clamp length to remaining bytes
+        int safeLen = Math.max(0, Math.min(length, input.length - offset));
+        byte[] out = new byte[safeLen];
+        if (safeLen > 0) {
+            System.arraycopy(input, offset, out, 0, safeLen);
+        }
+        return out;
     }
-    
+
     /**
-     * Writes data to a ByteBuffer.
+     * Safely writes into a ByteBuffer, limiting the number of bytes to its remaining capacity.
      */
-    public void writeToBuffer(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        buffer.put(data);
+    public void copyIntoBuffer(byte[] src, ByteBuffer dest) {
+        if (src == null || dest == null) {
+            return;
+        }
+        int toWrite = Math.min(src.length, dest.remaining());
+        if (toWrite > 0) {
+            dest.put(src, 0, toWrite);
+        }
     }
-    
+
     /**
-     * Sets a value at the specified index.
+     * Concatenate strings with a maximum output length to avoid oversized allocations.
      */
-    public void setValue(int index, byte value) {
-        buffer[index] = value;
-    }
-    
-    public byte[] getBuffer() {
-        return Arrays.copyOf(buffer, buffer.length);
+    public String concat(String a, String b, int maxLen) {
+        if (a == null) a = "";
+        if (b == null) b = "";
+        int targetMax = Math.max(0, maxLen);
+        String combined = a + b;
+        if (combined.length() > targetMax) {
+            combined = combined.substring(0, targetMax);
+        }
+        return combined;
     }
 }
 
