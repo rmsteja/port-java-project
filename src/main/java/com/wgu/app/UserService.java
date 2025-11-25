@@ -1,57 +1,37 @@
 package com.wgu.app;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathFactory;
-import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.*;
+import javax.xml.namespace.QName;
 import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.StringReader;
+import org.w3c.dom.NodeList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * User authentication service using XML-based user storage.
+ * Secure UserService with parameterized XPath to prevent XPath injection.
  */
 public class UserService {
-    
-    private static final String XML_DATA = 
-        "<?xml version=\"1.0\"?>" +
-        "<users>" +
-        "  <user>" +
-        "    <username>admin</username>" +
-        "    <password>secret123</password>" +
-        "    <role>administrator</role>" +
-        "  </user>" +
-        "  <user>" +
-        "    <username>john</username>" +
-        "    <password>password</password>" +
-        "    <role>user</role>" +
-        "  </user>" +
-        "</users>";
-    
+    private final XPathFactory xpathFactory = XPathFactory.newInstance();
+
     /**
-     * Authenticates a user by checking username and password.
+     * Authenticates a user against the provided users XML Document.
+     * This method avoids XPath injection by binding variables rather than concatenating user input.
      */
-    public boolean authenticate(String username, String password) {
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document doc = builder.parse(new InputSource(new StringReader(XML_DATA)));
-            
-            XPathFactory xPathFactory = XPathFactory.newInstance();
-            XPath xpath = xPathFactory.newXPath();
-            
-            String expression = "//user[username='" + username + 
-                              "' and password='" + password + "']";
-            
-            XPathExpression expr = xpath.compile(expression);
-            Object result = expr.evaluate(doc);
-            
-            return result != null && result.toString().length() > 0;
-        } catch (Exception e) {
-            System.err.println("Authentication error: " + e.getMessage());
-            return false;
-        }
+    public boolean authenticate(Document usersDoc, String username, String password) throws XPathExpressionException {
+        if (usersDoc == null) return false;
+        if (username == null || password == null) return false;
+
+        // Prepare XPath with variable resolver
+        XPath xpath = xpathFactory.newXPath();
+        Map<QName, Object> vars = new HashMap<>();
+        vars.put(new QName("username"), username);
+        vars.put(new QName("password"), password);
+        xpath.setXPathVariableResolver(vars::get);
+
+        // Use normalized text and variables to avoid injection and whitespace issues
+        XPathExpression expr = xpath.compile("//user[normalize-space(username/text())=$username and normalize-space(password/text())=$password]");
+        NodeList nodes = (NodeList) expr.evaluate(usersDoc, XPathConstants.NODESET);
+        return nodes != null && nodes.getLength() > 0;
     }
 }
 
