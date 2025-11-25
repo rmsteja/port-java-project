@@ -1,0 +1,85 @@
+stages:
+  - build
+  - test
+  - package
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version"
+
+cache:
+  paths:
+    - .m2/repository/
+
+build:
+  stage: build
+  image: maven:3.8-openjdk-11
+  script:
+    - echo "Building project..."
+    - mvn clean compile $MAVEN_CLI_OPTS
+  artifacts:
+    paths:
+      - target/classes/
+    expire_in: 1 hour
+  only:
+    - main
+    - master
+    - develop
+    - merge_requests
+  tags:
+    - docker
+
+test:
+  stage: test
+  image: maven:3.8-openjdk-11
+  script:
+    - echo "Running tests..."
+    - mvn test $MAVEN_CLI_OPTS
+  coverage: '/Total.*?([0-9]{1,3})%/'
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week
+  only:
+    - main
+    - master
+    - develop
+    - merge_requests
+  tags:
+    - docker
+
+package:
+  stage: package
+  image: maven:3.8-openjdk-11
+  script:
+    - echo "Packaging application..."
+    - mvn package -DskipTests $MAVEN_CLI_OPTS
+  artifacts:
+    paths:
+      - target/*.jar
+    expire_in: 1 week
+  only:
+    - main
+    - master
+    - develop
+  tags:
+    - docker
+
+# Webhook trigger example
+# This job can be triggered via GitLab API webhook
+webhook-build:
+  stage: build
+  image: maven:3.8-openjdk-11
+  script:
+    - echo "Webhook triggered build..."
+    - mvn clean compile test package $MAVEN_CLI_OPTS
+  only:
+    - webhooks
+  when: manual
+  tags:
+    - docker
+
