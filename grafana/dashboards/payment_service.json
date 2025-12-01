@@ -1,0 +1,143 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Payment Latency (p50/p95/p99)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(payment_latency_seconds_bucket{service=\"payment\"}[5m]))) * 1000",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(payment_latency_seconds_bucket{service=\"payment\"}[5m]))) * 1000",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(payment_latency_seconds_bucket{service=\"payment\"}[5m]))) * 1000",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Payment Error Rate (%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * sum(rate(payment_requests_total{service=\"payment\",status=\"error\"}[5m])) / sum(rate(payment_requests_total{service=\"payment\"}[5m]))",
+          "legendFormat": "error%"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Current Error Rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROM_DS"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * sum(rate(payment_requests_total{service=\"payment\",status=\"error\"}[1m])) / sum(rate(payment_requests_total{service=\"payment\"}[1m]))",
+          "legendFormat": "error%"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "payments",
+    "latency",
+    "errors"
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "route",
+        "label": "Route",
+        "hide": 0,
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PROM_DS"
+        },
+        "query": "label_values(payment_requests_total{service=\"payment\"}, route)",
+        "refresh": 1
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m"
+    ]
+  },
+  "timezone": "",
+  "title": "Payment Service Observability",
+  "version": 1,
+  "weekStart": ""
+}
