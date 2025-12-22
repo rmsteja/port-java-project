@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: ['**']
   pull_request:
-    branches: [ main, master, develop ]
+    branches: ['**']
   workflow_dispatch:  # Allows manual triggering
   repository_dispatch:  # Allows webhook triggering
 
