@@ -1,41 +1,55 @@
 package com.wgu.app;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Objects;
 
 /**
- * Utility class for processing binary data.
+ * DataProcessor with safe bounded writes to prevent buffer overflow.
  */
 public class DataProcessor {
-    
-    private static final int BUFFER_SIZE = 10;
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    
-    /**
-     * Copies input data to internal buffer.
-     */
-    public void process(byte[] input) {
-        System.arraycopy(input, 0, buffer, 0, input.length);
+    private final ByteBuffer buffer;
+
+    public DataProcessor(int capacity) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException("capacity must be > 0");
+        }
+        this.buffer = ByteBuffer.allocate(capacity);
     }
-    
+
     /**
-     * Writes data to a ByteBuffer.
+     * Writes up to 'length' bytes from 'src' starting at 'offset' into the internal buffer.
+     * This method enforces bounds and will only write what fits to avoid overflow.
+     *
+     * @return number of bytes actually written (may be less than requested if capacity is limited)
      */
-    public void writeToBuffer(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        buffer.put(data);
+    public synchronized int write(byte[] src, int offset, int length) {
+        Objects.requireNonNull(src, "src");
+        if (offset < 0 || length < 0 || offset > src.length) {
+            throw new IndexOutOfBoundsException("Invalid offset/length");
+        }
+        // Remaining capacity in destination
+        int available = buffer.remaining();
+        // Maximum bytes available from source starting at offset
+        int maxCopy = Math.min(length, src.length - offset);
+        // Bound by destination capacity
+        int toCopy = Math.min(maxCopy, Math.max(available, 0));
+        if (toCopy <= 0) {
+            return 0;
+        }
+        buffer.put(src, offset, toCopy);
+        return toCopy;
     }
-    
+
     /**
-     * Sets a value at the specified index.
+     * Returns all bytes written so far and resets the buffer for subsequent writes.
      */
-    public void setValue(int index, byte value) {
-        buffer[index] = value;
-    }
-    
-    public byte[] getBuffer() {
-        return Arrays.copyOf(buffer, buffer.length);
+    public synchronized byte[] readAll() {
+        int pos = buffer.position();
+        byte[] out = new byte[pos];
+        buffer.rewind();
+        buffer.get(out);
+        buffer.clear();
+        return out;
     }
 }
-
 
