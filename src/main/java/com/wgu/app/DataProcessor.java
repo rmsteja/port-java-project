@@ -14,7 +14,7 @@ public class DataProcessor {
     /**
      * Copies input data to internal buffer.
      */
-    public void processData(byte[] input) {
+    public void process(byte[] input) {
         System.arraycopy(input, 0, buffer, 0, input.length);
     }
     
@@ -37,4 +37,5 @@ public class DataProcessor {
         return Arrays.copyOf(buffer, buffer.length);
     }
 }
+
 
