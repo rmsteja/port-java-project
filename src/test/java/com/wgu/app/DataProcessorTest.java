@@ -21,7 +21,7 @@ public class DataProcessorTest {
     public void testProcessDataWithValidInput() {
         // Test with valid small data
         byte[] input = {1, 2, 3, 4, 5};
-        assertDoesNotThrow(() -> processor.processData(input), 
+        assertDoesNotThrow(() -> processor.process(input), 
             "Processing valid data should not throw exception");
     }
     
@@ -29,7 +29,7 @@ public class DataProcessorTest {
     public void testProcessDataWithEmptyArray() {
         // Test with empty array
         byte[] input = {};
-        assertDoesNotThrow(() -> processor.processData(input), 
+        assertDoesNotThrow(() -> processor.process(input), 
             "Processing empty array should not throw exception");
     }
     
@@ -56,4 +56,5 @@ public class DataProcessorTest {
         assertTrue(buffer.length > 0, "Buffer should have length > 0");
     }
 }
+
 
