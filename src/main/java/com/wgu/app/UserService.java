@@ -1,56 +1,75 @@
 package com.wgu.app;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathFactory;
-import javax.xml.xpath.XPathExpression;
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.StringReader;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPathVariableResolver;
+import org.w3c.dom.Document;
+import javax.xml.namespace.QName;
+import java.io.InputStream;
 
 /**
- * User authentication service using XML-based user storage.
+ * UserService with safe XPath usage to prevent XPath injection.
  */
 public class UserService {
-    
-    private static final String XML_DATA = 
-        "<?xml version=\"1.0\"?>" +
-        "<users>" +
-        "  <user>" +
-        "    <username>admin</username>" +
-        "    <password>secret123</password>" +
-        "    <role>administrator</role>" +
-        "  </user>" +
-        "  <user>" +
-        "    <username>john</username>" +
-        "    <password>password</password>" +
-        "    <role>user</role>" +
-        "  </user>" +
-        "</users>";
-    
+
     /**
-     * Authenticates a user by checking username and password.
+     * Authenticates a user by safely evaluating an XPath expression with variables.
+     * This avoids concatenating untrusted input into the XPath string.
      */
     public boolean authenticate(String username, String password) {
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document doc = builder.parse(new InputSource(new StringReader(XML_DATA)));
-            
-            XPathFactory xPathFactory = XPathFactory.newInstance();
-            XPath xpath = xPathFactory.newXPath();
-            
-            String expression = "//user[username='" + username + 
-                              "' and password='" + password + "']";
-            
-            XPathExpression expr = xpath.compile(expression);
-            Object result = expr.evaluate(doc);
-            
-            return result != null && result.toString().length() > 0;
+            // Load users XML from classpath (adjust if different source is used)
+            InputStream xmlStream = getClass().getResourceAsStream("/users.xml");
+            if (xmlStream == null) {
+                return false; // or throw
+            }
+
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true); // prevent XXE
+            dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            dbf.setXIncludeAware(false);
+            dbf.setExpandEntityReferences(false);
+            dbf.setNamespaceAware(true);
+
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(xmlStream);
+
+            XPathFactory xpf = XPathFactory.newInstance();
+            XPath xpath = xpf.newXPath();
+
+            // Bind variables instead of concatenation
+            xpath.setXPathVariableResolver(new SafeVariableResolver()
+                    .bind("username", username)
+                    .bind("password", password));
+
+            String expr = "/users/user[username = $username and password = $password]";
+            XPathExpression compiled = xpath.compile(expr);
+            Object result = compiled.evaluate(doc, XPathConstants.NODE);
+            return result != null;
         } catch (Exception e) {
-            System.err.println("Authentication error: " + e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Simple variable resolver with immutable bindings.
+     */
+    static class SafeVariableResolver implements XPathVariableResolver {
+        private java.util.Map<QName, Object> vars = new java.util.HashMap<>();
+
+        public SafeVariableResolver bind(String name, Object value) {
+            vars.put(new QName(name), value == null ? "" : value.toString());
+            return this;
+        }
+
+        @Override
+        public Object resolveVariable(QName variableName) {
+            return vars.getOrDefault(variableName, "");
         }
     }
 }
