@@ -18,7 +18,7 @@ public class Application {
         DataProcessor processor = new DataProcessor();
         System.out.println("\nProcessing data...");
         byte[] testData = {1, 2, 3, 4, 5};
-        processor.processData(testData);
+        processor.process(testData);
         System.out.println("Data processed");
         
         // Cache management
