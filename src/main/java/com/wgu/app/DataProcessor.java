@@ -1,40 +1,54 @@
 package com.wgu.app;
 
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
- * Utility class for processing binary data.
+ * DataProcessor - hardened against buffer overflows by enforcing strict bounds checks
+ * and safe copying. All writes are limited to allocated buffer sizes.
  */
 public class DataProcessor {
-    
-    private static final int BUFFER_SIZE = 10;
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    
+    // Define an upper bound to prevent oversized allocations or copies
+    private static final int MAX_BUFFER_SIZE = 8192; // 8KB cap, adjust as needed
+
     /**
-     * Copies input data to internal buffer.
+     * Safely processes raw byte data. Input is truncated to MAX_BUFFER_SIZE to avoid
+     * writing beyond buffer boundaries. All copy operations use checked lengths.
      */
-    public void processData(byte[] input) {
-        System.arraycopy(input, 0, buffer, 0, input.length);
+    public byte[] process(byte[] data) {
+        if (data == null) {
+            return new byte[0];
+        }
+        // Enforce bounds to avoid overflow during copy
+        int safeLen = Math.min(data.length, MAX_BUFFER_SIZE);
+        byte[] buffer = new byte[safeLen];
+        // Safe copy: only copy within the allocated buffer size
+        System.arraycopy(data, 0, buffer, 0, safeLen);
+        return transform(buffer);
     }
-    
+
     /**
-     * Writes data to a ByteBuffer.
+     * Safely processes a String by converting to UTF-8 bytes and delegating to process(byte[]).
      */
-    public void writeToBuffer(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        buffer.put(data);
+    public String processString(String input) {
+        if (input == null) {
+            return "";
+        }
+        byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
+        byte[] out = process(bytes);
+        return new String(out, StandardCharsets.UTF_8);
     }
-    
+
     /**
-     * Sets a value at the specified index.
+     * Example transform that returns a copy. Replace with real logic as needed,
+     * but never write past the provided buffer length.
      */
-    public void setValue(int index, byte value) {
-        buffer[index] = value;
-    }
-    
-    public byte[] getBuffer() {
-        return Arrays.copyOf(buffer, buffer.length);
+    private byte[] transform(byte[] buf) {
+        if (buf == null) {
+            return new byte[0];
+        }
+        // Safe copy preserving exact size
+        return Arrays.copyOf(buf, buf.length);
     }
 }
 
