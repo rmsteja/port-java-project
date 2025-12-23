@@ -10,6 +10,10 @@ public class DataProcessor {
     
     private static final int BUFFER_SIZE = 10;
     private byte[] buffer = new byte[BUFFER_SIZE];
+
+    public DataProcessor() {
+        this(1024); // delegate to main constructor
+    }
     
     /**
      * Copies input data to internal buffer.
@@ -17,7 +21,6 @@ public class DataProcessor {
     public void process(byte[] input) {
         System.arraycopy(input, 0, buffer, 0, input.length);
     }
-    
     /**
      * Writes data to a ByteBuffer.
      */
@@ -37,5 +40,6 @@ public class DataProcessor {
         return Arrays.copyOf(buffer, buffer.length);
     }
 }
+
 
 
