@@ -1,41 +1,39 @@
 package com.wgu.app;
 
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
- * Utility class for processing binary data.
+ * DataProcessor with safe buffer handling to prevent buffer overflow.
+ * Ensures all writes respect allocated buffer boundaries.
  */
 public class DataProcessor {
-    
-    private static final int BUFFER_SIZE = 10;
-    private byte[] buffer = new byte[BUFFER_SIZE];
-    
+
     /**
-     * Copies input data to internal buffer.
+     * Safely copies input bytes into a buffer of given size without overruns.
+     * Returns the portion actually copied.
      */
-    public void process(byte[] input) {
-        System.arraycopy(input, 0, buffer, 0, input.length);
+    public static byte[] processData(byte[] input, int bufferSize) {
+        if (bufferSize <= 0) {
+            return new byte[0];
+        }
+        byte[] buffer = new byte[bufferSize];
+        int inputLen = (input == null) ? 0 : input.length;
+        int copyLen = Math.min(inputLen, buffer.length);
+        if (copyLen > 0) {
+            System.arraycopy(input, 0, buffer, 0, copyLen);
+        }
+        // Return only the meaningful portion
+        return Arrays.copyOf(buffer, copyLen);
     }
-    
+
     /**
-     * Writes data to a ByteBuffer.
+     * Safely processes a String into a bounded buffer using UTF-8 encoding.
      */
-    public void writeToBuffer(byte[] data) {
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        buffer.put(data);
-    }
-    
-    /**
-     * Sets a value at the specified index.
-     */
-    public void setValue(int index, byte value) {
-        buffer[index] = value;
-    }
-    
-    public byte[] getBuffer() {
-        return Arrays.copyOf(buffer, buffer.length);
+    public static String processString(String input, int bufferSize) {
+        byte[] bytes = (input == null) ? new byte[0] : input.getBytes(StandardCharsets.UTF_8);
+        byte[] out = processData(bytes, bufferSize);
+        return new String(out, StandardCharsets.UTF_8);
     }
 }
-
 
